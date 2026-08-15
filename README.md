@@ -9,14 +9,14 @@ flake downloads the official package and makes it runnable on NixOS via an FHS s
 ## Usage
 
 ```sh
-nix run github:<user>/anycubic-slicer-next-flake
+nix run github:roccorakete/anycubic-slicer-next-flake
 ```
 
 Or add it as an overlay/package to your own configuration:
 
 ```nix
 {
-  inputs.anycubic-slicer-next.url = "github:<user>/anycubic-slicer-next-flake";
+  inputs.anycubic-slicer-next.url = "github:roccorakete/anycubic-slicer-next-flake";
 
   # e.g. in environment.systemPackages:
   environment.systemPackages = [ inputs.anycubic-slicer-next.packages.x86_64-linux.default ];
