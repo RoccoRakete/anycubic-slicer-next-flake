@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Updates version/dateStamp/ubuntuStamp/srcHash in flake.nix from Anycubic's APT repo.
+# Updates version/srcPath/srcHash in flake.nix from Anycubic's APT repo.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,23 +19,10 @@ if [[ -z "$version" || -z "$filename" ]]; then
   exit 1
 fi
 
-# Filename looks like:
-#   dists/noble/main/binary-amd64/develop_AnycubicSlicerNext-<version>_<dateStamp>-<ubuntuStamp>.deb
-basename="$(basename "$filename")"
-rest="${basename#develop_AnycubicSlicerNext-"$version"_}"
-rest="${rest%.deb}"
-date_stamp="${rest%%-*}"
-ubuntu_stamp="${rest#*-}"
-
-if [[ -z "$date_stamp" || -z "$ubuntu_stamp" ]]; then
-  echo "Could not derive dateStamp/ubuntuStamp from filename: $basename" >&2
-  exit 1
-fi
-
+# Filename is stored verbatim: its layout has changed between releases
+# (dists/.../develop_AnycubicSlicerNext-*.deb -> pool/.../AnycubicSlicerNext_linux-*.deb).
 deb_url="$repo_base/$filename"
-echo "Latest version:  $version"
-echo "Date stamp:      $date_stamp"
-echo "Ubuntu stamp:     $ubuntu_stamp"
+echo "Latest version:   $version"
 echo "Deb URL:          $deb_url"
 
 echo "Prefetching $deb_url ..."
@@ -50,8 +37,7 @@ echo "Hash:             $src_hash"
 
 sed -i \
   -e "s|version = \"[^\"]*\";|version = \"$version\";|" \
-  -e "s|dateStamp = \"[^\"]*\";|dateStamp = \"$date_stamp\";|" \
-  -e "s|ubuntuStamp = \"[^\"]*\";|ubuntuStamp = \"$ubuntu_stamp\";|" \
+  -e "s|srcPath = \"[^\"]*\";|srcPath = \"$filename\";|" \
   -e "s|srcHash = \"[^\"]*\";|srcHash = \"$src_hash\";|" \
   "$flake_nix"
 

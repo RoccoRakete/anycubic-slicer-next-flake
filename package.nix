@@ -7,8 +7,7 @@
   buildFHSEnv,
   symlinkJoin,
   version,
-  dateStamp,
-  ubuntuStamp,
+  srcPath,
   srcHash,
 }:
 let
@@ -17,7 +16,7 @@ let
     inherit version;
 
     src = fetchurl {
-      url = "https://cdn-universe-slicer.anycubic.com/prod/dists/noble/main/binary-amd64/develop_AnycubicSlicerNext-${version}_${dateStamp}-${ubuntuStamp}.deb";
+      url = "https://cdn-universe-slicer.anycubic.com/prod/${srcPath}";
       hash = srcHash;
     };
 
