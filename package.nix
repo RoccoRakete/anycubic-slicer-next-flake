@@ -15,8 +15,14 @@ let
     pname = "anycubic-slicer-next-unwrapped";
     inherit version;
 
+    # Host: Anycubic's global CDN (cdn-universe-slicer.anycubic.com) has served
+    # an expired TLS certificate since 2026-10-10. cdn-platform-slicer.anycubicloud.com
+    # is Anycubic's second official repo with a valid certificate; the .deb was
+    # verified byte-identical (cmp + SHA256) on 2026-10-20. If a host fails in
+    # the future, consider BOTH hosts before touching TLS verification.
+    # Keep in sync with repo_base in update-anycubic-slicer.sh.
     src = fetchurl {
-      url = "https://cdn-universe-slicer.anycubic.com/prod/${srcPath}";
+      url = "https://cdn-platform-slicer.anycubicloud.com/prod/${srcPath}";
       hash = srcHash;
     };
 

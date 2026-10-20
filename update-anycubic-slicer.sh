@@ -8,12 +8,21 @@
 #
 # TLS verification is never disabled. If the vendor CDN serves an expired or
 # invalid certificate, this script fails loudly instead of working around it.
+#
+# Host choice: Anycubic's global CDN (cdn-universe-slicer.anycubic.com) has
+# served an expired TLS certificate since 2026-10-10. We use
+# cdn-platform-slicer.anycubicloud.com instead: Anycubic's second official
+# repo (listed next to the global one in their own installer script) with a
+# valid certificate. Its Packages index and the .deb were verified
+# byte-identical (cmp + SHA256) on 2026-10-20. If a host fails in the future,
+# consider BOTH hosts before touching TLS verification.
+# Keep the base URL in package.nix in sync with repo_base below.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 flake_nix="$repo_root/flake.nix"
 
-repo_base="https://cdn-universe-slicer.anycubic.com/prod"
+repo_base="https://cdn-platform-slicer.anycubicloud.com/prod"
 dist_codename="noble"
 deb_arch="amd64"
 package_name="anycubicslicernext"
@@ -92,10 +101,12 @@ fi
 
 echo "Hash:             $src_hash"
 
-sed -i \
+# "-i.bak" works with both GNU and BSD sed.
+sed -i.bak \
   -e "s|version = \"[^\"]*\";|version = \"$version\";|" \
   -e "s|srcPath = \"[^\"]*\";|srcPath = \"$filename\";|" \
   -e "s|srcHash = \"[^\"]*\";|srcHash = \"$src_hash\";|" \
   "$flake_nix"
+rm -f "$flake_nix.bak"
 
 echo "Updated $flake_nix to version $version."
