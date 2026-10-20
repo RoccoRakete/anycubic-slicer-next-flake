@@ -8,19 +8,27 @@ on:
 
 permissions:
   contents: write
+  issues: write
+
+concurrency:
+  group: update-slicer
+  cancel-in-progress: false
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to Ubuntu 26 on 2026-10-19 (unwanted change).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
       - name: Run update script
-        run: ./update-anycubic-slicer.sh
+        # Shell runs with pipefail, so a script failure still fails the step.
+        run: ./update-anycubic-slicer.sh 2>&1 | tee "$RUNNER_TEMP/update.log"
 
       - name: Check for changes
         id: diff
@@ -44,3 +52,34 @@ jobs:
           git add flake.nix
           git commit -m "Update Anycubic Slicer Next to $version"
           git push
+
+      - name: Report failure (job summary and issue)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ISSUE_TITLE: "Workflow failed: Update Anycubic Slicer Next version"
+        run: |
+          log="$RUNNER_TEMP/update.log"
+          if [[ -f "$log" ]]; then
+            tail -n 30 "$log" > "$RUNNER_TEMP/tail.log"
+          else
+            echo "(update script produced no output; failure was in another step)" > "$RUNNER_TEMP/tail.log"
+          fi
+          {
+            echo "### Update workflow failed"
+            echo "Run: $RUN_URL"
+            echo '```'
+            cat "$RUNNER_TEMP/tail.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          fence='```'
+          body="$(printf 'Run failed: %s\n\nLast script output:\n\n%s\n%s\n%s\n' "$RUN_URL" "$fence" "$(cat "$RUNNER_TEMP/tail.log")" "$fence")"
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number // empty')"
+          if [[ -n "$existing" ]]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$ISSUE_TITLE" --body "$body"
+          fi
