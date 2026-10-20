@@ -36,6 +36,8 @@
         anycubic-slicer-next = anycubic-slicer-next;
       };
 
+      checks.${system}.default = anycubic-slicer-next;
+
       overlays.default = final: prev: { anycubic-slicer-next = anycubic-slicer-next; };
     };
 }
