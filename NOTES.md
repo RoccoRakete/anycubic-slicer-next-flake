@@ -1,7 +1,58 @@
 # Development notes
 
-Findings from packaging Anycubic Slicer Next 1.3.96 for NixOS. Kept for future
-maintainers (including future-us) in case a vendor update shifts any of this.
+Findings from packaging the upstream `.deb` for NixOS; last reviewed against
+2.0.06. Kept for future maintainers (including future-us) in case a vendor
+update shifts any of this. The bug write-ups below were first made against an
+older release (1.3.96); re-check them after major vendor updates.
+
+## Version scheme
+
+Three different numbers describe one release. Mixing them up is the trap at
+every update:
+
+- `Version:` in the APT `Packages` index (e.g. `2.0.06`) is what lands in
+  `flake.nix` as `version`.
+- The `.deb` filename on the CDN carries a *different* number plus a build
+  timestamp (currently
+  `pool/main/a/anycubicslicernext/AnycubicSlicerNext_linux-v2.0.0.5-20260913065625.deb`,
+  i.e. `v2.0.0.5-<timestamp>`). It cannot be derived from the index version.
+- The real app version is reported to live inside the `.deb` at
+  `resources/build-version.txt`. This comes from a third-party repackaging
+  project that reads the same index; not verified here (the `.deb` was not
+  unpacked for this note).
+
+Therefore always copy `srcPath` verbatim from the index's `Filename:` field;
+never assemble it from version parts. The filename layout has already changed
+once (see the history note in the Workbench section, and the comment in
+`flake.nix`).
+
+## How this repo is maintained
+
+- `update-anycubic-slicer.sh` is the only place that writes `version`,
+  `srcPath` and `srcHash` in `flake.nix`. The daily workflow
+  (`.github/workflows/update-slicer.yml`) runs it and pushes the result to
+  `main` itself, so commits like "Update Anycubic Slicer Next to X" come from
+  the bot, not from a human.
+- Which workflow builds when: the update workflow builds the package only if
+  `flake.nix` changed, before committing. The separate build-check workflow
+  (`.github/workflows/build.yml`) runs `nix build .#default` on every push to
+  `main`, every pull request, and on manual dispatch. `flake.nix` also exposes
+  `checks.x86_64-linux.default` (the same package) for `nix flake check`.
+- **The build downloads the `.deb` from Anycubic's CDN.** If the CDN is
+  unhealthy, CI goes red although the repo is fine. This is exactly what let
+  the update job die unnoticed for weeks: the global CDN
+  (`cdn-universe-slicer.anycubic.com`) has served an expired TLS certificate
+  since 2026-10-10. The script now uses Anycubic's second official host
+  (`cdn-platform-slicer.anycubicloud.com`); keep the base URL in `package.nix`
+  in sync with `repo_base` in the script. TLS verification is never disabled.
+  A failing update run opens (or comments on) a GitHub issue.
+- This repo is consumed by `nixcfg` (hosts `hermes` and `apollon`), pinned to a
+  commit via `nixcfg`'s `flake.lock`. When consumed that way, `nixcfg`
+  overrides this flake's `nixpkgs`, so the WebKitGTK/GTK versions in use are
+  decided by `nixcfg`, not by the `flake.lock` here. This repo's own
+  `flake.lock` only applies to `nix run github:...`. (Taken from the task
+  description; the `nixcfg` repo was not available to check.)
+- The package is `x86_64-linux` only.
 
 ## Why `buildFHSEnv` instead of `autoPatchelfHook`
 
@@ -101,9 +152,13 @@ future vendor builds, unlike a hard-coded byte offset) and `unzip` it into
 export ACNEXT_WORKBENCH_ENV_VAR="file:///usr/share/AnycubicSlicerNext/resources/workbench/index.html"
 ```
 
-This is very likely shipping *broken for everyone*, not just under Nix — the
-`.deb`'s filename literally starts with `develop_` and has been sitting
-unchanged in the "prod" APT repo for months. A user's already-installed Ubuntu
+This is very likely shipping *broken for everyone*, not just under Nix.
+Historical observation (1.3.96 era): the `.deb`'s filename literally started
+with `develop_` and had been sitting unchanged in the "prod" APT repo for
+months. That filename no longer exists (since commit `4045ee2` the index points
+at `pool/main/a/anycubicslicernext/AnycubicSlicerNext_linux-v2.0.0.5-*.deb`), so
+re-check whether the stub is still present in the current build before relying
+on this reasoning. A user's already-installed Ubuntu
 system might be running an older/different binary from before this regression,
 which would explain "works on Ubuntu" reports without contradicting any of the
 above.

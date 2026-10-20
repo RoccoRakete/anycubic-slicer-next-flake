@@ -6,6 +6,8 @@ flake downloads the official package and makes it runnable on NixOS via an FHS s
 (`buildFHSEnv`), since the binary has its resource path hard-coded to
 `/usr/share/AnycubicSlicerNext/resources`.
 
+Platform: `x86_64-linux` only (no aarch64).
+
 ## Usage
 
 ```sh
@@ -36,7 +38,8 @@ build time.
 ```
 
 The script queries Anycubic's APT index, determines the version/hash of the latest `.deb`, and
-updates `flake.nix` accordingly.
+updates `flake.nix` accordingly. The same script also runs automatically every day in a
+GitHub Actions workflow, which commits and pushes any change to `main`.
 
 ## Notes
 
