@@ -15,11 +15,11 @@
       };
 
       anycubicSrc = {
-        version = "2.0.06";
+        version = "1:2.0.0.6";
         # Taken verbatim from the APT Packages index "Filename:" field; its layout
         # changes between releases, so don't reconstruct it from parts.
-        srcPath = "pool/main/a/anycubicslicernext/AnycubicSlicerNext_linux-v2.0.0.5-20260913065625.deb";
-        srcHash = "sha256-/gh6VgFO0lzf5MPCk7UXra7gqbLh3tefXjlLeWiBfBU=";
+        srcPath = "pool/main/a/anycubicslicernext/AnycubicSlicerNext_linux-v2.0.0.6-20261030105113.deb";
+        srcHash = "sha256-/bE0pOEfrX55XI1CVSDOEwUyHMwL8TdaZRoVE/iFRng=";
       };
 
       anycubic-slicer-next = pkgs.callPackage ./package.nix {
